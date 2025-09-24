@@ -1,11 +1,11 @@
-import { ChatFlow } from "../models/chatFlow.model";
+import { ChatFlow } from "../models/chatFlow.model.js";
 import ExecutionLog from "../models/executionlog.model.js";
 import { sendInstagramMessage } from "../config/instagramMessage.js";
 
 async function handleIncomingMessage(userId, messageText) {
   const escapedText = messageText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const chatFlow = await ChatFlow.findOne({
-    trigger: { $regex: new RegExp(`^${escapedText}$`, 'i') }
+    triggers: { $regex: new RegExp(`^${escapedText}$`, 'i') }
   });
 
 
@@ -23,23 +23,16 @@ async function executeChatflow(userId, chatFlow) {
 
   try {
     if (chatFlow.nodes && chatFlow.nodes.length > 0) {
+   
       let currentNode = chatFlow.nodes[0];
       while (currentNode) {
+        console.log("Current node:", currentNode);
+
         await sendInstagramMessage(userId, currentNode);
-        executionFlow.push({
-          node: currentNode.id,
-          type: currentNode.type,
-          message: currentNode.message
-        });
+        executionFlow.push({ node: currentNode.id, type: currentNode.type, message: currentNode.message });
         currentNode = chatFlow.nodes.find(n => n.id === currentNode.nextNode);
       }
-
-
-      executionFlow.push({
-        node: firstNode.id,
-        type: firstNode.type,
-        message: firstNode.message
-      });
+    
     }
 
     const log = new ExecutionLog({
@@ -50,6 +43,8 @@ async function executeChatflow(userId, chatFlow) {
     });
 
     await log.save();
+   
+ 
 
   } catch (error) {
     console.error('Error executing chatFlow:', error);
