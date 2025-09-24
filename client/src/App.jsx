@@ -40,7 +40,8 @@ const ChatflowBuilder = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (currentFlow._id) {
+      const existingChatFlow = chatflows.filter((chat)=> chat.name === currentFlow.name)
+      if (existingChatFlow) {
         await axios.put(`${import.meta.env.VITE_BACKEND_URL}/chatFlow/${currentFlow._id}`, currentFlow);
         setSnackbar({ open: true, message: 'Chatflow updated successfully', severity: 'success' });
       } else {
@@ -59,7 +60,7 @@ const ChatflowBuilder = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this chatflow?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/chatflows/${id}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/chatFlow/${id}`);
       setSnackbar({ open: true, message: 'Chatflow deleted successfully', severity: 'success' });
       fetchChatflows();
     } catch (err) {
