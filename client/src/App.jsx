@@ -1,21 +1,71 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Container, Typography, TextField, Button, Box, 
-  Paper, Grid, Card, CardContent, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Snackbar, Alert
+import {
+  Container, Typography, Table, TableBody, TableCell, TableContainer,
+  TableHead, TableRow, Paper, Chip, TextField, Button, Box, Grid,
+  Card, CardContent, IconButton, Dialog, DialogTitle, DialogContent,
+  DialogActions, Snackbar, Alert
 } from '@mui/material';
 import { Add, Delete, Edit } from '@mui/icons-material';
 import axios from 'axios';
 
-const ChatflowBuilder = () => {
+// ================= ExecutionLogs Component =================
+export const ExecutionLogs = () => {
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const fetchLogs = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/logs`);
+      setLogs(response.data.data);
+    } catch (err) {
+      console.error('Error fetching logs:', err);
+    }
+  };
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Typography variant="h4" mb={3}>Execution Logs</Typography>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>User ID</TableCell>
+              <TableCell>Trigger</TableCell>
+              <TableCell>Nodes Executed</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Timestamp</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {logs.map((log) => (
+              <TableRow key={log._id}>
+                <TableCell>{log.userId}</TableCell>
+                <TableCell>{log.triggers}</TableCell>
+                <TableCell>{log.flow?.length || 0}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={log.status}
+                    color={log.status === 'success' ? 'success' : 'error'}
+                  />
+                </TableCell>
+                <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Container>
+  );
+};
+
+// ================= ChatflowBuilder Component =================
+export const ChatflowBuilder = () => {
   const [chatflows, setChatflows] = useState([]);
   const [open, setOpen] = useState(false);
-  const [currentFlow, setCurrentFlow] = useState({
-    name: '',
-    triggers: '',
-    nodes: []
-  });
+  const [currentFlow, setCurrentFlow] = useState({ name: '', trigger: '', nodes: [] });
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -27,7 +77,6 @@ const ChatflowBuilder = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/chatFlow`);
-        console.log("API raw response:", response);
       setChatflows(response.data);
     } catch (err) {
       console.error('Error fetching chatflows:', err);
@@ -40,7 +89,7 @@ const ChatflowBuilder = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const existingChatFlow = chatflows.filter((chat)=> chat.name === currentFlow.name)
+      const existingChatFlow = chatflows.find((chat) => chat._id === currentFlow._id);
       if (existingChatFlow) {
         await axios.put(`${import.meta.env.VITE_BACKEND_URL}/chatFlow/${currentFlow._id}`, currentFlow);
         setSnackbar({ open: true, message: 'Chatflow updated successfully', severity: 'success' });
@@ -70,16 +119,8 @@ const ChatflowBuilder = () => {
   };
 
   const addNode = () => {
-    const newNode = {
-      id: Date.now().toString(),
-      type: 'text',
-      message: '',
-      options: []
-    };
-    setCurrentFlow({
-      ...currentFlow,
-      nodes: [...currentFlow.nodes, newNode]
-    });
+    const newNode = { id: Date.now().toString(), type: 'text', message: '', options: [] };
+    setCurrentFlow({ ...currentFlow, nodes: [...currentFlow.nodes, newNode] });
   };
 
   const updateNode = (index, field, value) => {
@@ -97,11 +138,7 @@ const ChatflowBuilder = () => {
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Chatflow Builder</Typography>
-        <Button 
-          variant="contained" 
-          startIcon={<Add />} 
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="contained" startIcon={<Add />} onClick={() => setOpen(true)}>
           Create Chatflow
         </Button>
       </Box>
@@ -115,22 +152,13 @@ const ChatflowBuilder = () => {
               <Card>
                 <CardContent>
                   <Typography variant="h6">{flow.name}</Typography>
-                  <Typography color="textSecondary">Trigger: {flow.triggers}</Typography>
+                  <Typography color="textSecondary">Trigger: {flow.trigger}</Typography>
                   <Typography>Nodes: {flow.nodes?.length || 0}</Typography>
                   <Box mt={2}>
-                    <Button 
-                      size="small" 
-                      startIcon={<Edit />} 
-                      onClick={() => { setCurrentFlow(flow); setOpen(true); }}
-                    >
+                    <Button size="small" startIcon={<Edit />} onClick={() => { setCurrentFlow(flow); setOpen(true); }}>
                       Edit
                     </Button>
-                    <Button 
-                      size="small" 
-                      color="error" 
-                      startIcon={<Delete />} 
-                      onClick={() => handleDelete(flow._id)}
-                    >
+                    <Button size="small" color="error" startIcon={<Delete />} onClick={() => handleDelete(flow._id)}>
                       Delete
                     </Button>
                   </Box>
@@ -150,14 +178,14 @@ const ChatflowBuilder = () => {
             fullWidth
             label="Flow Name"
             value={currentFlow.name}
-            onChange={(e) => setCurrentFlow({...currentFlow, name: e.target.value})}
+            onChange={(e) => setCurrentFlow({ ...currentFlow, name: e.target.value })}
             sx={{ mt: 2 }}
           />
           <TextField
             fullWidth
             label="Trigger Message"
             value={currentFlow.trigger}
-            onChange={(e) => setCurrentFlow({...currentFlow, trigger: e.target.value})}
+            onChange={(e) => setCurrentFlow({ ...currentFlow, trigger: e.target.value })}
             sx={{ mt: 2 }}
           />
 
@@ -206,9 +234,9 @@ const ChatflowBuilder = () => {
         </DialogActions>
       </Dialog>
 
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={4000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
         <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
@@ -219,4 +247,13 @@ const ChatflowBuilder = () => {
   );
 };
 
-export default ChatflowBuilder;
+// ================= Optional Parent Component =================
+// If you want to show both components on the same page
+ const AdminDashboard = () => (
+  <>
+    <ExecutionLogs />
+    <ChatflowBuilder />
+  </>
+ );
+
+ export default AdminDashboard;
