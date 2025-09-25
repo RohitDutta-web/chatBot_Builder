@@ -15,7 +15,7 @@ Responsive UI: Built with Material-UI for a modern and responsive design.
 
 Frontend: React, Material-UI
 
-Backend: Node.js, Express (assumed from context)
+Backend: Node.js, Express 
 
 State Management: React Hooks (useState, useEffect)
 
