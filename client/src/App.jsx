@@ -247,8 +247,7 @@ export const ChatflowBuilder = () => {
   );
 };
 
-// ================= Optional Parent Component =================
-// If you want to show both components on the same page
+
  const AdminDashboard = () => (
   <>
     <ExecutionLogs />
