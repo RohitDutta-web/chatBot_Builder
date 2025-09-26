@@ -43,7 +43,7 @@ export const ExecutionLogs = () => {
             {logs.map((log) => (
               <TableRow key={log._id}>
                 <TableCell>{log.userId}</TableCell>
-                <TableCell>{log.triggers}</TableCell>
+                <TableCell>{log.trigger}</TableCell>
                 <TableCell>{log.flow?.length || 0}</TableCell>
                 <TableCell>
                   <Chip
@@ -119,15 +119,16 @@ export const ChatflowBuilder = () => {
   };
 
   const addNode = () => {
-    const newNode = { id: Date.now().toString(), type: 'text', message: '', options: [] };
+    const newNode = { id: Date.now().toString(), type: 'text', message: '', mediaUrl: '', options: [] };
     setCurrentFlow({ ...currentFlow, nodes: [...currentFlow.nodes, newNode] });
   };
 
-  const updateNode = (index, field, value) => {
-    const updatedNodes = [...currentFlow.nodes];
-    updatedNodes[index] = { ...updatedNodes[index], [field]: value };
-    setCurrentFlow({ ...currentFlow, nodes: updatedNodes });
-  };
+const updateNode = (index, field, value) => {
+  const updatedNodes = [...currentFlow.nodes];
+  updatedNodes[index] = { ...updatedNodes[index], [field]: value };
+  setCurrentFlow({ ...currentFlow, nodes: updatedNodes });
+};
+
 
   const deleteNode = (index) => {
     const updatedNodes = currentFlow.nodes.filter((_, i) => i !== index);
@@ -208,13 +209,23 @@ export const ChatflowBuilder = () => {
                   </TextField>
                 </Grid>
                 <Grid item xs={7}>
-                  <TextField
-                    fullWidth
-                    label="Message"
-                    value={node.message}
-                    onChange={(e) => updateNode(index, 'message', e.target.value)}
-                  />
+                  {node.type === 'media' ? (
+                    <TextField
+                      fullWidth
+                      label="Media URL"
+                      value={node.mediaUrl || ''}
+                      onChange={(e) => updateNode(index, 'mediaUrl', e.target.value)}
+                    />
+                  ) : (
+                    <TextField
+                      fullWidth
+                      label="Message"
+                      value={node.message}
+                      onChange={(e) => updateNode(index, 'message', e.target.value)}
+                    />
+                  )}
                 </Grid>
+
                 <Grid item xs={2}>
                   <IconButton onClick={() => deleteNode(index)} color="error">
                     <Delete />
@@ -249,11 +260,11 @@ export const ChatflowBuilder = () => {
 
 // ================= Optional Parent Component =================
 // If you want to show both components on the same page
- const AdminDashboard = () => (
+const AdminDashboard = () => (
   <>
     <ExecutionLogs />
     <ChatflowBuilder />
   </>
- );
+);
 
- export default AdminDashboard;
+export default AdminDashboard;

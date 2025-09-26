@@ -5,7 +5,7 @@ import { sendInstagramMessage } from "../config/instagramMessage.js";
 async function handleIncomingMessage(userId, messageText) {
   const escapedText = messageText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const chatFlow = await ChatFlow.findOne({
-    triggers: { $regex: new RegExp(`^${escapedText}$`, 'i') }
+    trigger: { $regex: new RegExp(`^${escapedText}$`, 'i') }
   });
 
 
