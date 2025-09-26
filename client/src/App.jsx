@@ -260,7 +260,7 @@ const updateNode = (index, field, value) => {
 
 // ================= Optional Parent Component =================
 // If you want to show both components on the same page
-const AdminDashboard = () => (
+ const AdminDashboard = () => (
   <>
     <ExecutionLogs />
     <ChatflowBuilder />
