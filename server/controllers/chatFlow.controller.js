@@ -2,17 +2,17 @@ import { ChatFlow } from "../models/chatFlow.model.js";
 
 export const createChatFlow = async (req, res) => {
   try {
-    const chatFlow = await ChatFlow.create(req.body)
-    res.status(201).json(chatFlow)
-   }
-  catch (e) {
-     res.status(400).json({ error: e.message });
+    let { triggers, trigger, ...rest } = req.body;
+    if (!triggers && trigger) triggers = [trigger];
+    const chatFlow = await ChatFlow.create({ ...rest, triggers });
+    res.status(201).json(chatFlow);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
   }
 }
 
-
 export const getChatFlows = async (req, res) => {
-    try {
+  try {
     const chatFlows = await ChatFlow.find().sort({ createdAt: -1 }).lean();
     res.json(chatFlows);
   } catch (error) {
@@ -20,9 +20,8 @@ export const getChatFlows = async (req, res) => {
   }
 }
 
-
 export const getChatFlowById = async (req, res) => {
-    try {
+  try {
     const chatFlow = await ChatFlow.findById(req.params.id).lean();
     if (!chatFlow) return res.status(404).json({ error: 'Chatflow not found' });
     res.json(chatFlow);
@@ -31,9 +30,8 @@ export const getChatFlowById = async (req, res) => {
   }
 }
 
-
 export const updateChatFlow = async (req, res) => {
-    try {
+  try {
     const updated = await ChatFlow.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!updated) return res.status(404).json({ error: 'Chatflow not found' });
     res.json(updated);
@@ -42,9 +40,8 @@ export const updateChatFlow = async (req, res) => {
   }
 }
 
-
 export const deleteChatFlow = async (req, res) => {
-   try {
+  try {
     const deleted = await ChatFlow.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Chatflow not found' });
     res.json({ success: true });

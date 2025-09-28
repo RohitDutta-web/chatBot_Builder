@@ -7,18 +7,12 @@ export async function sendInstagramMessage(userId, node) {
     buttons: node.buttons || [],
     media: node.media || null
   });
-
   if (process.env.MOCK_INSTAGRAM === 'true') return;
-
-
   const url = `https://graph.facebook.com/v19.0/me/messages?access_token=${process.env.INSTAGRAM_ACCESS_TOKEN}`;
-
   const messageData = {
     recipient: { id: userId },
     message: {}
   };
-
-
   if (node.type === 'text') {
     messageData.message.text = node.message;
   } else if (node.type === 'buttons') {
@@ -43,7 +37,6 @@ export async function sendInstagramMessage(userId, node) {
       }
     };
   }
-
   try {
     const response = await axios.post(url, messageData);
     console.log("Instagram response:", response.data);

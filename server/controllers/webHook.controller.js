@@ -3,49 +3,56 @@ import ExecutionLog from "../models/executionlog.model.js";
 import { sendInstagramMessage } from "../config/instagramMessage.js";
 
 async function handleIncomingMessage(userId, messageText) {
-  const escapedText = messageText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Find chatflow where triggers array contains the message text (case-insensitive)
   const chatFlow = await ChatFlow.findOne({
-    trigger: { $regex: new RegExp(`^${escapedText}$`, 'i') }
+    triggers: { $elemMatch: { $regex: new RegExp(`^${messageText}$`, 'i') } }
   });
-
 
   if (!chatFlow) {
     console.log(`No chatflow matched for trigger: "${messageText}"`);
     return;
   }
 
-
   await executeChatflow(userId, chatFlow);
 }
 
 async function executeChatflow(userId, chatFlow) {
   const executionFlow = [];
+  const startedAt = new Date();
 
   try {
     if (chatFlow.nodes && chatFlow.nodes.length > 0) {
-   
       let currentNode = chatFlow.nodes[0];
       while (currentNode) {
         console.log("Current node:", currentNode);
-
         await sendInstagramMessage(userId, currentNode);
-        executionFlow.push({ node: currentNode.id, type: currentNode.type, message: currentNode.message });
-        currentNode = chatFlow.nodes.find(n => n.id === currentNode.nextNode);
+        executionFlow.push({
+          nodeId: currentNode.id,
+          type: currentNode.type,
+          message: currentNode.message,
+          options: currentNode.options,
+          next: currentNode.next,
+          timestamp: new Date(),
+          status: "sent"
+        });
+        if (currentNode.options && currentNode.options.length > 0) {
+          const nextId = currentNode.options[0].next;
+          currentNode = chatFlow.nodes.find(n => n.id === nextId);
+        } else {
+          currentNode = chatFlow.nodes.find(n => n.id === currentNode.next);
+        }
       }
-    
     }
-
+    const endedAt = new Date();
     const log = new ExecutionLog({
       userId,
-      trigger: chatFlow.trigger,
-      flow: executionFlow,
+      trigger: chatFlow.triggers[0],
+      nodes: executionFlow,
+      startedAt,
+      endedAt,
       status: 'success'
     });
-
     await log.save();
-   
- 
-
   } catch (error) {
     console.error('Error executing chatFlow:', error);
   }

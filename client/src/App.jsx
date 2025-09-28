@@ -11,6 +11,8 @@ import axios from 'axios';
 // ================= ExecutionLogs Component =================
 export const ExecutionLogs = () => {
   const [logs, setLogs] = useState([]);
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     fetchLogs();
@@ -37,6 +39,7 @@ export const ExecutionLogs = () => {
               <TableCell>Nodes Executed</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Timestamp</TableCell>
+              <TableCell>Details</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -51,12 +54,105 @@ export const ExecutionLogs = () => {
                     color={log.status === 'success' ? 'success' : 'error'}
                   />
                 </TableCell>
-                <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
+                <TableCell>{
+                  log.startedAt ? new Date(log.startedAt).toLocaleString() :
+                    log.endedAt ? new Date(log.endedAt).toLocaleString() :
+                      log.createdAt ? new Date(log.createdAt).toLocaleString() :
+                        ''
+                }</TableCell>
+                <TableCell>
+                  <Button size="small" variant="outlined" onClick={() => { setSelectedLog(log); setDetailsOpen(true); }}>View</Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
+
+      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Execution Details</DialogTitle>
+        <DialogContent>
+          {selectedLog && (
+            <Box>
+              <Typography variant="subtitle1" mb={2}>User ID: {selectedLog.userId}</Typography>
+              <Typography variant="subtitle1" mb={2}>Trigger: {selectedLog.trigger}</Typography>
+              <Box mt={2} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {selectedLog.flow?.map((node, idx) => {
+                  let nextNode = null;
+                  if (node.next) {
+                    nextNode = selectedLog.flow.find(n => n.nodeId === node.next || n.id === node.next);
+                  }
+                  // Success/failure icon
+                  let statusIcon = null;
+                  if (node.status === "sent") statusIcon = <span style={{ color: 'green', fontSize: 22 }}>✔️</span>;
+                  else if (node.status === "failed") statusIcon = <span style={{ color: 'red', fontSize: 22 }}>❌</span>;
+                  else statusIcon = <span style={{ color: 'orange', fontSize: 22 }}>⏳</span>;
+                  return (
+                    <React.Fragment key={idx}>
+                      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                        <Paper sx={{ p: 2, mb: 0, minWidth: 350, maxWidth: 500, borderLeft: '4px solid #1976d2', boxShadow: 3, position: 'relative' }}>
+                          <Box sx={{ position: 'absolute', top: 10, right: 16 }}>{statusIcon}</Box>
+                          <Typography variant="body2" color="textSecondary">Node {idx + 1} <b>({node.type})</b></Typography>
+                          <Typography variant="body2" color="textSecondary">Node ID: <b>{node.nodeId || node.id}</b></Typography>
+                          {node.message && <Typography variant="body1" sx={{ mt: 1 }}>Message: {node.message}</Typography>}
+                          {node.options && node.options.length > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="body2">Options:</Typography>
+                              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                {node.options.map((opt, i) => (
+                                  <Chip key={i} label={typeof opt === 'string' ? opt : opt.label || opt} color="primary" sx={{ fontWeight: 'bold', bgcolor: '#e3f2fd', border: '1px solid #1976d2' }} />
+                                ))}
+                              </Box>
+                              {/* Branching visualization */}
+                              <Box sx={{ mt: 1, ml: 2 }}>
+                                {node.options.map((opt, i) => {
+                                  const nextId = typeof opt === 'string' ? undefined : opt.next;
+                                  if (!nextId) return null;
+                                  const branchNode = selectedLog.flow.find(n => n.nodeId === nextId || n.id === nextId);
+                                  return (
+                                    <Typography key={i} variant="body2" sx={{ color: branchNode ? 'green' : 'red', fontWeight: 'bold' }}>
+                                      ↳ {opt.label || opt} → {nextId} {branchNode ? '(executed)' : '(not executed)'}
+                                    </Typography>
+                                  );
+                                })}
+                              </Box>
+                            </Box>
+                          )}
+                          {node.userReply && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="body2" sx={{ bgcolor: '#fffde7', p: 1, borderRadius: 1, fontWeight: 'bold', color: '#f57c00' }}>User Reply: <b>{node.userReply}</b></Typography>
+                            </Box>
+                          )}
+                          {node.next && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="body2" color={nextNode ? "primary" : "error"}>
+                                Next Node: <b>{node.next}</b> {nextNode ? "(executed)" : "(not executed)"}
+                              </Typography>
+                            </Box>
+                          )}
+                          {node.timestamp && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="body2" color="textSecondary">Timestamp: {new Date(node.timestamp).toLocaleString()}</Typography>
+                            </Box>
+                          )}
+                        </Paper>
+                      </Box>
+                      {idx < selectedLog.flow.length - 1 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 0 }}>
+                          <Typography variant="h4" color="primary" sx={{ mb: -1, mt: -1 }}>↓</Typography>
+                        </Box>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
@@ -65,7 +161,7 @@ export const ExecutionLogs = () => {
 export const ChatflowBuilder = () => {
   const [chatflows, setChatflows] = useState([]);
   const [open, setOpen] = useState(false);
-  const [currentFlow, setCurrentFlow] = useState({ name: '', trigger: '', nodes: [] });
+  const [currentFlow, setCurrentFlow] = useState({ name: '', triggers: [''], nodes: [] });
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -98,7 +194,7 @@ export const ChatflowBuilder = () => {
         setSnackbar({ open: true, message: 'Chatflow created successfully', severity: 'success' });
       }
       setOpen(false);
-      setCurrentFlow({ name: '', trigger: '', nodes: [] });
+      setCurrentFlow({ name: '', triggers: [''], nodes: [] });
       fetchChatflows();
     } catch (err) {
       console.error('Error saving chatflow:', err);
@@ -119,15 +215,42 @@ export const ChatflowBuilder = () => {
   };
 
   const addNode = () => {
-    const newNode = { id: Date.now().toString(), type: 'text', message: '', mediaUrl: '', options: [] };
+    const newNode = {
+      id: Date.now().toString(),
+      type: 'text',
+      message: '',
+      mediaType: 'image',
+      mediaUrl: '',
+      options: [],
+      next: ''
+    };
     setCurrentFlow({ ...currentFlow, nodes: [...currentFlow.nodes, newNode] });
+  }
+
+  const updateNode = (index, field, value) => {
+    const updatedNodes = [...currentFlow.nodes];
+    updatedNodes[index] = { ...updatedNodes[index], [field]: value };
+    setCurrentFlow({ ...currentFlow, nodes: updatedNodes });
   };
 
-const updateNode = (index, field, value) => {
-  const updatedNodes = [...currentFlow.nodes];
-  updatedNodes[index] = { ...updatedNodes[index], [field]: value };
-  setCurrentFlow({ ...currentFlow, nodes: updatedNodes });
-};
+  const addOptionToNode = (nodeIndex) => {
+    const updatedNodes = [...currentFlow.nodes];
+    updatedNodes[nodeIndex].options = updatedNodes[nodeIndex].options || [];
+    updatedNodes[nodeIndex].options.push({ label: '', next: '' });
+    setCurrentFlow({ ...currentFlow, nodes: updatedNodes });
+  };
+
+  const updateOption = (nodeIndex, optionIndex, field, value) => {
+    const updatedNodes = [...currentFlow.nodes];
+    updatedNodes[nodeIndex].options[optionIndex][field] = value;
+    setCurrentFlow({ ...currentFlow, nodes: updatedNodes });
+  };
+
+  const deleteOption = (nodeIndex, optionIndex) => {
+    const updatedNodes = [...currentFlow.nodes];
+    updatedNodes[nodeIndex].options.splice(optionIndex, 1);
+    setCurrentFlow({ ...currentFlow, nodes: updatedNodes });
+  };
 
 
   const deleteNode = (index) => {
@@ -182,13 +305,34 @@ const updateNode = (index, field, value) => {
             onChange={(e) => setCurrentFlow({ ...currentFlow, name: e.target.value })}
             sx={{ mt: 2 }}
           />
-          <TextField
-            fullWidth
-            label="Trigger Message"
-            value={currentFlow.trigger}
-            onChange={(e) => setCurrentFlow({ ...currentFlow, trigger: e.target.value })}
-            sx={{ mt: 2 }}
-          />
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle1">Trigger Messages</Typography>
+            {currentFlow.triggers.map((trigger, idx) => (
+              <Box key={idx} display="flex" alignItems="center" mb={1}>
+                <TextField
+                  label={`Trigger ${idx + 1}`}
+                  value={trigger}
+                  onChange={e => {
+                    const updated = [...currentFlow.triggers];
+                    updated[idx] = e.target.value;
+                    setCurrentFlow({ ...currentFlow, triggers: updated });
+                  }}
+                  sx={{ mr: 1 }}
+                />
+                <IconButton
+                  color="error"
+                  onClick={() => {
+                    const updated = currentFlow.triggers.filter((_, i) => i !== idx);
+                    setCurrentFlow({ ...currentFlow, triggers: updated.length ? updated : [''] });
+                  }}
+                  disabled={currentFlow.triggers.length === 1}
+                >
+                  <Delete />
+                </IconButton>
+              </Box>
+            ))}
+            <Button onClick={() => setCurrentFlow({ ...currentFlow, triggers: [...currentFlow.triggers, ''] })} startIcon={<Add />}>Add Trigger</Button>
+          </Box>
 
           <Typography variant="h6" sx={{ mt: 3 }}>Nodes</Typography>
           {currentFlow.nodes.map((node, index) => (
@@ -206,24 +350,74 @@ const updateNode = (index, field, value) => {
                     <option value="text">Text</option>
                     <option value="buttons">Buttons</option>
                     <option value="media">Media</option>
+                    <option value="quick_reply">Quick Reply</option>
                   </TextField>
                 </Grid>
                 <Grid item xs={7}>
                   {node.type === 'media' ? (
-                    <TextField
-                      fullWidth
-                      label="Media URL"
-                      value={node.mediaUrl || ''}
-                      onChange={(e) => updateNode(index, 'mediaUrl', e.target.value)}
-                    />
+                    <Box display="flex" gap={2}>
+                      <TextField
+                        select
+                        label="Media Type"
+                        value={node.mediaType || 'image'}
+                        onChange={e => updateNode(index, 'mediaType', e.target.value)}
+                        SelectProps={{ native: true }}
+                        sx={{ width: 120 }}
+                      >
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                        <option value="file">File</option>
+                      </TextField>
+                      <TextField
+                        fullWidth
+                        label="Media URL"
+                        value={node.mediaUrl || ''}
+                        onChange={e => updateNode(index, 'mediaUrl', e.target.value)}
+                      />
+                    </Box>
                   ) : (
                     <TextField
                       fullWidth
                       label="Message"
                       value={node.message}
-                      onChange={(e) => updateNode(index, 'message', e.target.value)}
+                      onChange={e => updateNode(index, 'message', e.target.value)}
                     />
                   )}
+                </Grid>
+                <Grid item xs={12}>
+                  {(node.type === 'buttons' || node.type === 'quick_reply') && (
+                    <Box>
+                      <Typography variant="subtitle2">Options</Typography>
+                      {node.options?.map((opt, optIdx) => (
+                        <Box key={optIdx} display="flex" alignItems="center" mb={1}>
+                          <TextField
+                            label="Label"
+                            value={opt.label}
+                            onChange={e => updateOption(index, optIdx, 'label', e.target.value)}
+                            sx={{ mr: 1 }}
+                          />
+                          <TextField
+                            label="Next Node ID"
+                            value={opt.next}
+                            onChange={e => updateOption(index, optIdx, 'next', e.target.value)}
+                            sx={{ mr: 1 }}
+                          />
+                          <IconButton color="error" onClick={() => deleteOption(index, optIdx)}>
+                            <Delete />
+                          </IconButton>
+                        </Box>
+                      ))}
+                      <Button onClick={() => addOptionToNode(index)} startIcon={<Add />}>Add Option</Button>
+                    </Box>
+                  )}
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    label="Next Node ID (for sequential flow)"
+                    value={node.next || ''}
+                    onChange={e => updateNode(index, 'next', e.target.value)}
+                    fullWidth
+                  />
                 </Grid>
 
                 <Grid item xs={2}>
@@ -258,7 +452,7 @@ const updateNode = (index, field, value) => {
   );
 };
 
- const AdminDashboard = () => (
+const AdminDashboard = () => (
   <>
     <ExecutionLogs />
     <ChatflowBuilder />
