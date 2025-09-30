@@ -31,15 +31,15 @@ async function executeChatflow(userId, chatFlow) {
           type: currentNode.type,
           message: currentNode.message,
           options: currentNode.options,
-          next: currentNode.next,
+          nextNodeName: currentNode.nextNodeName,
           timestamp: new Date(),
           status: "sent"
         });
         if (currentNode.options && currentNode.options.length > 0) {
-          const nextId = currentNode.options[0].next;
-          currentNode = chatFlow.nodes.find(n => n.id === nextId);
+          const nextName = currentNode.options[0].nextNodeName;
+          currentNode = chatFlow.nodes.find(n => n.message === nextName);
         } else {
-          currentNode = chatFlow.nodes.find(n => n.id === currentNode.next);
+          currentNode = chatFlow.nodes.find(n => n.message === currentNode.nextNodeName);
         }
       }
     }

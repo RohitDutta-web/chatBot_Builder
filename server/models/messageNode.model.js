@@ -13,7 +13,7 @@ const NodeSchema = new mongoose.Schema({
   mediaType: { type: String, enum: ["image", "video", "file"] },
   mediaUrl: { type: String },
   options: [OptionsSchema],
-  next: { type: String, default: null },
+  nextNodeName: { type: String, default: null },
 }, { _id: false });
 
 export default NodeSchema;
